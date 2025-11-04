@@ -39,14 +39,14 @@ const CategorySection = ({ title, games }: CategorySectionProps) => {
         <div className="flex gap-2">
           <button
             onClick={() => scroll("left")}
-            className="p-2 bg-[var(--button-bg)] border-2 border-[var(--border-color)] hover:bg-[var(--accent-primary)] hover:border-black transition-all"
+            className="p-2 bg-[var(--button-bg)] border-2 border-[var(--border-color)] hover:bg-[var(--accent-secondary)] hover:border-black transition-all"
             aria-label="Scroll left"
           >
             <FiChevronLeft size={20} />
           </button>
           <button
             onClick={() => scroll("right")}
-            className="p-2 bg-[var(--button-bg)] border-2 border-[var(--border-color)] hover:bg-[var(--accent-primary)] hover:border-black transition-all"
+            className="p-2 bg-[var(--button-bg)] border-2 border-[var(--border-color)] hover:bg-[var(--accent-secondary)] hover:border-black transition-all"
             aria-label="Scroll right"
           >
             <FiChevronRight size={20} />

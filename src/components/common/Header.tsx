@@ -49,7 +49,7 @@ const Header = () => {
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
-              className="p-2 bg-[var(--button-bg)] border-2 border-[var(--border-color)] hover:bg-[var(--accent-primary)] hover:border-black transition-all"
+              className="p-2 bg-[var(--button-bg)] border-2 border-[var(--border-color)] hover:bg-[var(--accent-secondary)] hover:border-black transition-all"
               aria-label="Toggle theme"
             >
               {theme === 'dark' ? (
@@ -76,7 +76,7 @@ const Header = () => {
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="w-full px-4 py-2 text-left hover:bg-[var(--accent-primary)] hover:text-black transition-colors"
+                    className="w-full px-4 py-2 text-left hover:bg-[var(--accent-primary)] hover:translate-y-0 hover:text-black transition-colors "
                   >
                     Logout
                   </button>
@@ -85,7 +85,7 @@ const Header = () => {
             ) : (
               <div className="flex gap-2">
                 <Link to="/login">
-                  <button className="px-4 py-2 bg-[var(--button-bg)] border-2 border-[var(--border-color)] hover:bg-[var(--accent-primary)] hover:text-black hover:border-black transition-all font-semibold text-sm">
+                  <button className="px-4 py-2 bg-[var(--button-bg)] border-2 border-[var(--border-color)] hover:bg-[var(--accent-secondary)] hover:text-black hover:border-black transition-all font-semibold text-sm">
                     Login
                   </button>
                 </Link>

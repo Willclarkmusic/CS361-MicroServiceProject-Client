@@ -31,22 +31,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
 
   const login = async (email: string, password: string): Promise<void> => {
-    // Simulate API call
-    return new Promise((resolve) => {
+    // Simulate API call with demo credentials validation
+    return new Promise((resolve, reject) => {
       setTimeout(() => {
-        const mockUser: User = {
-          id: "1",
-          username: email.split("@")[0],
-          email: email,
-        };
+        // Check demo credentials
+        if (email === "demo" && password === "1234") {
+          const mockUser: User = {
+            id: "demo-user",
+            username: "demo",
+            email: "demo@example.com",
+          };
 
-        setAuthState({
-          user: mockUser,
-          isAuthenticated: true,
-        });
+          setAuthState({
+            user: mockUser,
+            isAuthenticated: true,
+          });
 
-        localStorage.setItem("user", JSON.stringify(mockUser));
-        resolve();
+          localStorage.setItem("user", JSON.stringify(mockUser));
+          resolve();
+        } else {
+          reject(new Error("Invalid credentials"));
+        }
       }, 500);
     });
   };
@@ -56,9 +61,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     email: string,
     password: string
   ): Promise<void> => {
-    // Simulate API call
-    return new Promise((resolve) => {
+    // Simulate API call - for demo, accept any registration
+    return new Promise((resolve, reject) => {
       setTimeout(() => {
+        if (!username || !email || !password) {
+          reject(new Error("All fields are required"));
+          return;
+        }
+
         const mockUser: User = {
           id: String(Date.now()),
           username: username,

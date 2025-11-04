@@ -14,6 +14,7 @@ const Login = () => {
     password: "",
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const { login, register } = useAuth();
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ const Login = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
 
     try {
       if (mode === "login") {
@@ -31,6 +33,7 @@ const Login = () => {
       navigate("/");
     } catch (error) {
       console.error("Authentication error:", error);
+      setError("Invalid credentials. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -39,6 +42,7 @@ const Login = () => {
   const toggleMode = () => {
     setMode(mode === "login" ? "register" : "login");
     setFormData({ username: "", email: "", password: "" });
+    setError("");
   };
 
   return (
@@ -98,16 +102,16 @@ const Login = () => {
               </div>
             )}
 
-            {/* Email */}
+            {/* Email / Username */}
             <div>
               <label
                 htmlFor="email"
                 className="block text-sm font-bold mb-2 text-[var(--text-primary)]"
               >
-                Email
+                {mode === "login" ? "Username or Email" : "Email"}
               </label>
               <input
-                type="email"
+                type={mode === "login" ? "text" : "email"}
                 id="email"
                 value={formData.email}
                 onChange={(e) =>
@@ -115,7 +119,11 @@ const Login = () => {
                 }
                 required
                 className="w-full"
-                placeholder="Enter your email"
+                placeholder={
+                  mode === "login"
+                    ? "Enter your username or email"
+                    : "Enter your email"
+                }
               />
             </div>
 
@@ -140,6 +148,13 @@ const Login = () => {
               />
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="p-3 bg-red-100 dark:bg-red-900/20 border-2 border-red-500 text-red-700 dark:text-red-400 text-sm font-semibold">
+                {error}
+              </div>
+            )}
+
             {/* Submit Button */}
             <button
               type="submit"
@@ -153,6 +168,23 @@ const Login = () => {
                 : "Create Account"}
             </button>
           </form>
+
+          {/* Demo Credentials */}
+          {mode === "login" && (
+            <div className="mt-6 p-4 bg-[var(--bg-secondary)] border-2 border-[var(--border-color)]">
+              <h3 className="font-bold text-sm text-[var(--text-primary)] mb-2">
+                Demo Credentials
+              </h3>
+              <div className="space-y-1 text-sm">
+                <p className="text-[var(--text-secondary)]">
+                  <span className="font-semibold">Username:</span> demo
+                </p>
+                <p className="text-[var(--text-secondary)]">
+                  <span className="font-semibold">Password:</span> 1234
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Toggle Link */}
           <div className="mt-6 text-center">

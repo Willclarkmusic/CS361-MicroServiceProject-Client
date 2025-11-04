@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiMenu, FiChevronDown } from 'react-icons/fi';
-import { getAllGenres } from '../../data/mockGames';
+import { getAllGenres } from '../../data/gamesFromCSV';
 
 const MenuDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -25,23 +25,25 @@ const MenuDropdown = () => {
           onMouseEnter={() => setGenresOpen(true)}
           onMouseLeave={() => setGenresOpen(false)}
         >
-          <button className="flex items-center gap-1 px-4 py-2 text-[var(--text-primary)] hover:text-[var(--accent-primary)] font-semibold transition-colors">
+          <button className="flex items-center gap-1 px-4 py-2 text-[var(--text-primary)] hover:text-[var(--accent-secondary)] font-semibold transition-colors">
             Genres
             <FiChevronDown size={16} />
           </button>
 
           {genresOpen && (
-            <div className="absolute left-0 top-full mt-2 w-56 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] shadow-[4px_4px_0_0_var(--shadow-color)] max-h-96 overflow-y-auto">
-              <div className="grid grid-cols-1 gap-1 p-2">
-                {genres.map((genre) => (
-                  <Link
-                    key={genre}
-                    to={`/?genre=${genre.toLowerCase()}`}
-                    className="px-3 py-2 hover:bg-[var(--accent-primary)] hover:text-black transition-colors text-[var(--text-primary)]"
-                  >
-                    {genre}
-                  </Link>
-                ))}
+            <div className="absolute left-0 top-full pt-2 w-56">
+              <div className="bg-[var(--bg-primary)] border-2 border-[var(--border-color)] shadow-[4px_4px_0_0_var(--shadow-color)] max-h-96 overflow-y-auto">
+                <div className="grid grid-cols-1 gap-1 p-2">
+                  {genres.map((genre) => (
+                    <Link
+                      key={genre}
+                      to={`/?genre=${genre.toLowerCase()}`}
+                      className="px-3 py-2 hover:bg-[var(--accent-primary)] hover:text-black transition-colors text-[var(--text-primary)]"
+                    >
+                      {genre}
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -78,7 +80,9 @@ const MenuDropdown = () => {
                 <span>Genres</span>
                 <FiChevronDown
                   size={16}
-                  className={`transition-transform ${genresOpen ? 'rotate-180' : ''}`}
+                  className={`transition-transform ${
+                    genresOpen ? "rotate-180" : ""
+                  }`}
                 />
               </button>
 

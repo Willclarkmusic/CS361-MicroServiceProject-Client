@@ -5,7 +5,7 @@ import {
   getTrendingGames,
   getActionGames,
   getTopRatedGames,
-} from '../data/mockGames';
+} from '../data/gamesFromCSV';
 
 const Home = () => {
   const featuredGames = getFeaturedGames();
@@ -16,12 +16,12 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-8">
+      <section className="container mx-auto md:px-4 py-8">
         <HeroSlider games={featuredGames} />
       </section>
 
       {/* Categories Section */}
-      <section className="container mx-auto px-4 py-8">
+      <section className="container mx-auto md:px-4 py-8">
         <CategorySection title="Trending Now" games={trendingGames} />
         <CategorySection title="Action Games" games={actionGames} />
         <CategorySection title="Top Rated" games={topRatedGames} />
