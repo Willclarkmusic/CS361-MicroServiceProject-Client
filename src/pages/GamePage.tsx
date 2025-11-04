@@ -1,11 +1,17 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { getGameById } from '../data/mockGames';
-import { FiStar, FiArrowLeft, FiCalendar, FiMonitor } from 'react-icons/fi';
+import { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { getGameById } from "../data/gamesFromCSV";
+import { getReviewsByGameId } from "../data/mockReviews";
+import MediaGallery from "../components/gamePage/MediaGallery";
+import ReviewsSection from "../components/gamePage/ReviewsSection";
+import { FiStar, FiArrowLeft, FiCalendar } from "react-icons/fi";
 
-const GameDetail = () => {
+const GamePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const game = id ? getGameById(id) : undefined;
+  const reviews = id ? getReviewsByGameId(id) : [];
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   if (!game) {
     return (
@@ -15,7 +21,7 @@ const GameDetail = () => {
             Game Not Found
           </h1>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate("/")}
             className="bg-[var(--accent-primary)] text-black px-6 py-3 border-2 border-black font-bold hover:bg-[var(--accent-secondary)] transition-all"
           >
             Back to Home
@@ -31,7 +37,7 @@ const GameDetail = () => {
       <div className="container mx-auto px-4 py-6">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 px-4 py-2 bg-[var(--button-bg)] border-2 border-[var(--border-color)] hover:bg-[var(--accent-primary)] hover:border-black transition-all font-semibold"
+          className="flex items-center gap-2 px-4 py-2 my-2 bg-[var(--button-bg)] border-2 border-[var(--border-color)] hover:bg-[var(--accent-secondary)] hover:border-black transition-all font-semibold"
         >
           <FiArrowLeft size={20} />
           Back
@@ -40,24 +46,24 @@ const GameDetail = () => {
 
       {/* Hero Section */}
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-4">
           {/* Game Image */}
-          <div className="border-2 border-[var(--border-color)] shadow-[6px_6px_0_0_var(--shadow-color)] overflow-hidden">
+          <div className="border-2 lg:col-span-2 border-[var(--border-color)] overflow-hidden">
             <img
               src={game.imageUrl}
               alt={game.title}
-              className="w-full h-[600px] object-cover"
+              className="w-full h-full object-contain"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.src =
-                  'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=1200';
+                  "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=1200";
               }}
             />
           </div>
 
           {/* Game Info */}
           <div className="flex flex-col">
-            <h1 className="text-5xl font-bold mb-4 text-[var(--text-primary)]">
+            <h1 className="text-5xl text-left font-bold mb-4 text-[var(--text-primary)]">
               {game.title}
             </h1>
 
@@ -70,7 +76,7 @@ const GameDetail = () => {
             </div>
 
             {/* Metadata */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-2  gap-4 mb-6">
               <div className="p-4 bg-[var(--bg-secondary)] border-2 border-[var(--border-color)]">
                 <div className="flex items-center gap-2 mb-2 text-[var(--text-secondary)]">
                   <FiCalendar size={18} />
@@ -80,31 +86,21 @@ const GameDetail = () => {
                   {game.releaseYear}
                 </p>
               </div>
-
-              <div className="p-4 bg-[var(--bg-secondary)] border-2 border-[var(--border-color)]">
-                <div className="flex items-center gap-2 mb-2 text-[var(--text-secondary)]">
-                  <FiMonitor size={18} />
-                  <span className="text-sm font-semibold">Platforms</span>
-                </div>
-                <p className="text-xl font-bold text-[var(--text-primary)]">
-                  {game.platform.length}
-                </p>
-              </div>
             </div>
 
             {/* Developer */}
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-[var(--text-secondary)] mb-2">
+              <h3 className="text-sm text-left font-semibold text-[var(--text-secondary)] mb-2">
                 DEVELOPER
               </h3>
-              <p className="text-xl font-bold text-[var(--text-primary)]">
+              <p className="text-xl text-left font-bold text-[var(--text-primary)]">
                 {game.developer}
               </p>
             </div>
 
             {/* Genres */}
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-[var(--text-secondary)] mb-3">
+              <h3 className="text-sm text-left font-semibold text-[var(--text-secondary)] mb-3">
                 GENRES
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -121,14 +117,14 @@ const GameDetail = () => {
 
             {/* Platforms */}
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-[var(--text-secondary)] mb-3">
+              <h3 className="text-sm text-left font-semibold text-[var(--text-secondary)] mb-3">
                 AVAILABLE ON
               </h3>
               <div className="flex flex-wrap gap-2">
                 {game.platform.map((platform) => (
                   <span
                     key={platform}
-                    className="px-4 py-2 bg-[var(--accent-primary)] text-black border-2 border-black font-semibold"
+                    className="px-4 py-2 bg-[var(--card-bg)] border-2 border-[var(--border-color)] font-semibold text-[var(--text-primary)] hover:bg-[var(--accent-primary)] hover:text-black transition-all cursor-pointer"
                   >
                     {platform}
                   </span>
@@ -139,19 +135,37 @@ const GameDetail = () => {
         </div>
 
         {/* Description Section */}
-        <div className="max-w-4xl">
-          <h2 className="text-3xl font-bold mb-4 text-[var(--text-primary)]">
-            About This Game
-          </h2>
-          <div className="p-6 bg-[var(--card-bg)] border-2 border-[var(--border-color)] shadow-[4px_4px_0_0_var(--shadow-color)]">
-            <p className="text-lg leading-relaxed text-[var(--text-secondary)]">
+        <div className="w-full mb-8">
+          <div className="px-8 py-4 bg-[var(--card-bg)] border-2 border-[var(--border-color)] shadow-[4px_4px_0_0_var(--shadow-color)]">
+            <h2 className="text-2xl font-bold mb-4 text-[var(--text-primary)] text-left">
+              About This Game
+            </h2>
+            <p
+              className={`text-lg leading-relaxed text-[var(--text-secondary)] text-left ${
+                !descriptionExpanded ? "line-clamp-2" : ""
+              }`}
+            >
               {game.description}
             </p>
+            {game.description.length > 300 && (
+              <button
+                onClick={() => setDescriptionExpanded(!descriptionExpanded)}
+                className="text-[var(--accent-primary)] font-bold hover:underline mt-3 text-sm"
+              >
+                {descriptionExpanded ? "Show Less" : "Show More"}
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Media Gallery Section */}
+        <MediaGallery screenshots={game.screenshots} gameName={game.title} />
+
+        {/* Reviews Section */}
+        <ReviewsSection reviews={reviews} gameName={game.title} />
       </div>
     </div>
   );
 };
 
-export default GameDetail;
+export default GamePage;

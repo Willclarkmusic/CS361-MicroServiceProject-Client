@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Game } from "../../types/Game";
-import { FiChevronLeft, FiChevronRight, FiStar } from "react-icons/fi";
+import { FiStar } from "react-icons/fi";
 
 interface HeroSliderProps {
   games: Game[];
@@ -9,6 +9,7 @@ interface HeroSliderProps {
 
 const HeroSlider = ({ games }: HeroSliderProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const navigate = useNavigate();
 
   // Auto-rotate every 6 seconds
@@ -20,16 +21,13 @@ const HeroSlider = ({ games }: HeroSliderProps) => {
     return () => clearInterval(interval);
   }, [games.length]);
 
+  // Reset description expansion when slide changes
+  useEffect(() => {
+    setDescriptionExpanded(false);
+  }, [currentIndex]);
+
   const goToSlide = (index: number) => {
     setCurrentIndex(index);
-  };
-
-  const goToPrevious = () => {
-    setCurrentIndex((prev) => (prev - 1 + games.length) % games.length);
-  };
-
-  const goToNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % games.length);
   };
 
   const currentGame = games[currentIndex];
@@ -54,11 +52,11 @@ const HeroSlider = ({ games }: HeroSliderProps) => {
       </div>
 
       {/* Content */}
-      <div className="relative h-full flex items-center">
-        <div className="container px-8">
-          <div className="max-w-2xl">
+      <div className="relative h-full p-4 flex items-center">
+        <div className="container">
+          <div className="max-w-2xl text-left">
             {/* Title */}
-            <h1 className="text-4xl md:text-6xl font-bold mb-4 text-white">
+            <h1 className="text-4xl md:text-6xl font-bold mb-4 text-left text-white">
               {currentGame.title}
             </h1>
 
@@ -85,17 +83,25 @@ const HeroSlider = ({ games }: HeroSliderProps) => {
             </div>
 
             {/* Description */}
-            <p className="text-lg text-white/90 mb-6 line-clamp-3">
-              {currentGame.description}
-            </p>
+            <div className="mb-6 max-w-md">
+              <p
+                className={`text-lg text-white/90 text-left ${
+                  !descriptionExpanded ? "line-clamp-2" : ""
+                }`}
+              >
+                {currentGame.description}
+              </p>
+            </div>
 
             {/* CTA Button */}
-            <button
-              onClick={() => navigate(`/game/${currentGame.id}`)}
-              className="bg-[var(--accent-primary)] text-black px-8 py-3 border-2 border-black font-bold hover:bg-[var(--accent-primary)] transition-all hover:shadow-none shadow-[4px_4px_0_0_#000]"
-            >
-              View Details
-            </button>
+            <div className="flex justify-start">
+              <button
+                onClick={() => navigate(`/game/${currentGame.id}`)}
+                className="bg-[var(--accent-primary)] text-black px-8 py-3 border-2 border-black font-bold hover:bg-[var(--accent-primary)] transition-all hover:shadow-none shadow-[4px_4px_0_0_#000]"
+              >
+                View Details
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -106,12 +112,11 @@ const HeroSlider = ({ games }: HeroSliderProps) => {
           <button
             key={index}
             onClick={() => goToSlide(index)}
-            className={`p-[10px] border-2 border-white transition-all ${
+            className={`selector-button p-[10px] border-1 border-white transition-all ${
               index === currentIndex
-                ? "bg-[var(--accent-primary)]"
+                ? "bg-[var(--accent-secondary)]"
                 : "bg-white/30 hover:bg-white/50"
             }`}
-            aria-label={`Go to slide ${index + 1}`}
           />
         ))}
       </div>
