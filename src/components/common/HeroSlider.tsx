@@ -34,6 +34,10 @@ const HeroSlider = ({ games }: HeroSliderProps) => {
 
   if (!currentGame) return null;
 
+  // Defensive: ensure arrays and numbers are valid
+  const genres = Array.isArray(currentGame.genres) ? currentGame.genres : [];
+  const rating = typeof currentGame.rating === 'number' ? currentGame.rating : 0;
+
   return (
     <div className="relative w-full h-[500px] md:h-[600px] overflow-hidden mb-6">
       {/* Background Image with Overlay */}
@@ -64,7 +68,7 @@ const HeroSlider = ({ games }: HeroSliderProps) => {
             <div className="flex items-center gap-4 mb-4 text-white">
               <div className="flex items-center gap-1 bg-[var(--accent-primary)] text-black px-3 py-1 border-2 border-black font-bold">
                 <FiStar size={18} fill="currentColor" />
-                <span>{currentGame.rating.toFixed(1)}</span>
+                <span>{rating.toFixed(1)}</span>
               </div>
               <span className="font-semibold">{currentGame.releaseYear}</span>
               <span className="font-semibold">{currentGame.developer}</span>
@@ -72,7 +76,7 @@ const HeroSlider = ({ games }: HeroSliderProps) => {
 
             {/* Genres */}
             <div className="flex flex-wrap gap-2 mb-6">
-              {currentGame.genres.map((genre) => (
+              {genres.map((genre) => (
                 <span
                   key={genre}
                   className="px-3 py-1 bg-white/10 border-2 border-white text-white backdrop-blur-sm font-semibold"

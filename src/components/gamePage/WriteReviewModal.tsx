@@ -1,13 +1,11 @@
-import { useState, FormEvent, useEffect } from 'react';
-import { FiX } from 'react-icons/fi';
-import type { Review } from '../../types/Review';
+import { useState, FormEvent, useEffect } from "react";
+import { FiX } from "react-icons/fi";
 
 interface WriteReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   gameName: string;
-  onSubmit?: (rating: number, title: string, content: string) => void;
-  editingReview?: Review | null;
+  onSubmit?: (rating: number, content: string) => void;
 }
 
 const WriteReviewModal = ({
@@ -15,26 +13,20 @@ const WriteReviewModal = ({
   onClose,
   gameName,
   onSubmit,
-  editingReview = null,
 }: WriteReviewModalProps) => {
   const [rating, setRating] = useState(5);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState("");
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [submitting, setSubmitting] = useState(false);
 
-  // Pre-fill form when editing
+  // Reset form when modal opens
   useEffect(() => {
-    if (editingReview) {
-      setRating(editingReview.rating);
-      setTitle(editingReview.title);
-      setContent(editingReview.content);
-    } else {
+    if (isOpen) {
       setRating(5);
-      setTitle('');
-      setContent('');
+      setContent("");
+      setErrors({});
     }
-    setErrors({});
-  }, [editingReview, isOpen]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -42,54 +34,44 @@ const WriteReviewModal = ({
     const newErrors: { [key: string]: string } = {};
 
     if (rating < 1 || rating > 10) {
-      newErrors.rating = 'Please select a rating between 1 and 10';
-    }
-    if (title.trim().length < 3) {
-      newErrors.title = 'Title must be at least 3 characters';
+      newErrors.rating = "Please select a rating between 1 and 10";
     }
     if (content.trim().length < 10) {
-      newErrors.content = 'Review must be at least 10 characters';
+      newErrors.content = "Review must be at least 10 characters";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     if (!validate()) {
       return;
     }
 
-    // Show confirmation dialog
-    const confirmMessage = editingReview
-      ? "Are you sure you want to update this review?"
-      : "Are you sure you want to submit this review?";
-
-    const confirmed = window.confirm(confirmMessage);
+    const confirmed = window.confirm(
+      "Are you sure you want to submit this review?"
+    );
 
     if (!confirmed) {
       return;
     }
 
-    // Call onSubmit if provided
     if (onSubmit) {
-      onSubmit(rating, title.trim(), content.trim());
+      setSubmitting(true);
+      try {
+        await onSubmit(Math.round(rating), content.trim());
+      } finally {
+        setSubmitting(false);
+      }
     }
-
-    // Reset form and close
-    setRating(5);
-    setTitle('');
-    setContent('');
-    setErrors({});
-    onClose();
   };
 
   const handleClose = () => {
     setRating(5);
-    setTitle('');
-    setContent('');
+    setContent("");
     setErrors({});
     onClose();
   };
@@ -106,7 +88,7 @@ const WriteReviewModal = ({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b-2 border-[var(--border-color)]">
           <h2 className="text-2xl font-bold text-[var(--text-primary)]">
-            {editingReview ? 'Edit Your Review' : `Write a Review for ${gameName}`}
+            Write a Review for {gameName}
           </h2>
           <button
             onClick={handleClose}
@@ -122,46 +104,24 @@ const WriteReviewModal = ({
           {/* Rating */}
           <div>
             <label className="block text-sm font-bold mb-3 text-[var(--text-primary)]">
-              Your Rating: {rating.toFixed(1)}/10
+              Your Rating: {rating}/10
             </label>
             <input
               type="range"
               min="1"
               max="10"
-              step="0.1"
+              step="1"
               value={rating}
-              onChange={(e) => setRating(parseFloat(e.target.value))}
+              onChange={(e) => setRating(parseInt(e.target.value, 10))}
               className="w-full h-2 bg-[var(--bg-secondary)] border-2 border-[var(--border-color)] appearance-none cursor-pointer slider"
             />
             <div className="flex justify-between text-sm text-[var(--text-secondary)] mt-2">
-              <span>1.0</span>
-              <span>5.5</span>
-              <span>10.0</span>
+              <span>1</span>
+              <span>5</span>
+              <span>10</span>
             </div>
             {errors.rating && (
               <p className="text-red-500 text-sm mt-2">{errors.rating}</p>
-            )}
-          </div>
-
-          {/* Title */}
-          <div>
-            <label
-              htmlFor="review-title"
-              className="block text-sm font-bold mb-2 text-[var(--text-primary)]"
-            >
-              Review Title *
-            </label>
-            <input
-              type="text"
-              id="review-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Summarize your experience..."
-              className="w-full"
-              maxLength={100}
-            />
-            {errors.title && (
-              <p className="text-red-500 text-sm mt-2">{errors.title}</p>
             )}
           </div>
 
@@ -197,9 +157,10 @@ const WriteReviewModal = ({
           <div className="flex gap-4 pt-4">
             <button
               type="submit"
-              className="flex-1 bg-[var(--accent-primary)] text-black py-3 border-2 border-black font-bold hover:bg-[var(--accent-secondary)] transition-all"
+              disabled={submitting}
+              className="flex-1 bg-[var(--accent-primary)] text-black py-3 border-2 border-black font-bold hover:bg-[var(--accent-secondary)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {editingReview ? 'Update Review' : 'Submit Review'}
+              {submitting ? "Submitting..." : "Submit Review"}
             </button>
             <button
               type="button"

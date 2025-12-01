@@ -1,22 +1,44 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiMenu, FiChevronDown } from 'react-icons/fi';
-import { getAllGenres } from '../../data/gamesFromCSV';
+import * as gameService from '../../services/gameService';
+import type { Genre } from '../../types/Game';
 
 const MenuDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [genresOpen, setGenresOpen] = useState(false);
-  const genres = getAllGenres();
+  const [genres, setGenres] = useState<Genre[]>([]);
+
+  // Fetch genres on mount
+  useEffect(() => {
+    const fetchGenres = async () => {
+      try {
+        const genreList = await gameService.getAllGenres();
+        setGenres(genreList);
+      } catch (err) {
+        console.error("Error fetching genres:", err);
+      }
+    };
+
+    fetchGenres();
+  }, []);
 
   return (
     <div className="relative">
       {/* Desktop Menu */}
       <div className="hidden lg:flex items-center gap-4">
         <Link
-          to="/"
+          to="/search"
           className="px-4 py-2 text-[var(--text-primary)] hover:text-[var(--accent-primary)] font-semibold transition-colors"
         >
           All Games
+        </Link>
+
+        <Link
+          to="/news"
+          className="px-4 py-2 text-[var(--text-primary)] hover:text-[var(--accent-primary)] font-semibold transition-colors"
+        >
+          News
         </Link>
 
         {/* Genres Dropdown */}
@@ -36,11 +58,11 @@ const MenuDropdown = () => {
                 <div className="grid grid-cols-1 gap-1 p-2">
                   {genres.map((genre) => (
                     <Link
-                      key={genre}
-                      to={`/?genre=${genre.toLowerCase()}`}
+                      key={genre.id}
+                      to={`/search?genre=${genre.slug}`}
                       className="px-3 py-2 hover:bg-[var(--accent-primary)] hover:text-black transition-colors text-[var(--text-primary)]"
                     >
-                      {genre}
+                      {genre.name}
                     </Link>
                   ))}
                 </div>
@@ -64,11 +86,19 @@ const MenuDropdown = () => {
         <div className="absolute right-0 top-full mt-2 w-64 bg-[var(--bg-primary)] border-2 border-[var(--border-color)] shadow-[4px_4px_0_0_var(--shadow-color)] lg:hidden">
           <div className="flex flex-col">
             <Link
-              to="/"
+              to="/search"
               onClick={() => setIsOpen(false)}
               className="px-4 py-3 hover:bg-[var(--accent-primary)] hover:text-black transition-colors text-[var(--text-primary)] border-b border-[var(--border-color)]"
             >
               All Games
+            </Link>
+
+            <Link
+              to="/news"
+              onClick={() => setIsOpen(false)}
+              className="px-4 py-3 hover:bg-[var(--accent-primary)] hover:text-black transition-colors text-[var(--text-primary)] border-b border-[var(--border-color)]"
+            >
+              News
             </Link>
 
             {/* Mobile Genres Section */}
@@ -90,15 +120,15 @@ const MenuDropdown = () => {
                 <div className="bg-[var(--bg-secondary)] max-h-64 overflow-y-auto">
                   {genres.map((genre) => (
                     <Link
-                      key={genre}
-                      to={`/?genre=${genre.toLowerCase()}`}
+                      key={genre.id}
+                      to={`/search?genre=${genre.slug}`}
                       onClick={() => {
                         setIsOpen(false);
                         setGenresOpen(false);
                       }}
                       className="block px-6 py-2 hover:bg-[var(--accent-primary)] hover:text-black transition-colors text-[var(--text-primary)] text-sm"
                     >
-                      {genre}
+                      {genre.name}
                     </Link>
                   ))}
                 </div>

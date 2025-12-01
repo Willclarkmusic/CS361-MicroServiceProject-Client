@@ -1,30 +1,80 @@
-import { useState, useEffect } from "react";
-import type { Review } from "../../types/Review";
+import { useState, useEffect, useCallback } from "react";
+import type { Review, ReviewAPI } from "../../types/Review";
 import ReviewCard from "./ReviewCard";
 import WriteReviewModal from "./WriteReviewModal";
 import LoginRequiredModal from "./LoginRequiredModal";
 import { useAuth } from "../../context/AuthContext";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import * as reviewService from "../../services/reviewService";
+import { getUser } from "../../services/userService";
 
 interface ReviewsSectionProps {
-  reviews: Review[];
+  gameId: string;
   gameName: string;
 }
 
 const REVIEWS_PER_PAGE = 5;
 
-const ReviewsSection = ({ reviews, gameName }: ReviewsSectionProps) => {
+const ReviewsSection = ({ gameId, gameName }: ReviewsSectionProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoginRequiredOpen, setIsLoginRequiredOpen] = useState(false);
-  const [editingReview, setEditingReview] = useState<Review | null>(null);
-  const [displayedReviews, setDisplayedReviews] = useState<Review[]>(reviews);
+  const [displayedReviews, setDisplayedReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { isAuthenticated, user } = useAuth();
 
-  // Update displayed reviews when reviews prop changes
+  // Fetch reviews and enrich with user info
+  const fetchReviews = useCallback(async () => {
+    try {
+      setLoading(true);
+      const apiReviews = await reviewService.getReviewsByGame(gameId);
+
+      // Enrich reviews with user info
+      const enrichedReviews: Review[] = await Promise.all(
+        apiReviews.map(async (apiReview: ReviewAPI, index: number) => {
+          let username = `User #${apiReview.userId}`;
+          let userAvatar =
+            "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+          try {
+            const userInfo = await getUser(apiReview.userId);
+            username = userInfo.username;
+            userAvatar = userInfo.avatarURL || userAvatar;
+          } catch (err) {
+            console.error(
+              `Failed to fetch user info for user ${apiReview.userId}:`,
+              err
+            );
+          }
+
+          return {
+            // Use reviewId if available, otherwise generate a unique key
+            reviewId: apiReview.reviewId ?? (apiReview.userId * 1000000 + apiReview.gameId * 1000 + index),
+            gameId: apiReview.gameId,
+            userId: apiReview.userId,
+            username,
+            userAvatar,
+            rating: apiReview.reviewScore,
+            content: apiReview.review,
+          };
+        })
+      );
+
+      setDisplayedReviews(enrichedReviews);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching reviews:", err);
+      setError("Failed to load reviews");
+      setDisplayedReviews([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [gameId]);
+
   useEffect(() => {
-    setDisplayedReviews(reviews);
-  }, [reviews]);
+    fetchReviews();
+  }, [fetchReviews]);
 
   // Calculate pagination
   const totalPages = Math.ceil(displayedReviews.length / REVIEWS_PER_PAGE);
@@ -38,47 +88,81 @@ const ReviewsSection = ({ reviews, gameName }: ReviewsSectionProps) => {
 
   const handleWriteReviewClick = () => {
     if (isAuthenticated) {
-      setEditingReview(null);
       setIsModalOpen(true);
     } else {
       setIsLoginRequiredOpen(true);
     }
   };
 
-  const handleEditClick = (review: Review) => {
-    setEditingReview(review);
-    setIsModalOpen(true);
-  };
-
-  const handleDeleteClick = (reviewId: string) => {
+  const handleDeleteClick = async (reviewId: number) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this review? This action is permanent and cannot be undone."
     );
 
     if (confirmDelete) {
-      // Remove the review from displayed reviews (persists until page refresh)
-      setDisplayedReviews((prev) => prev.filter((r) => r.id !== reviewId));
+      try {
+        await reviewService.deleteReview(reviewId);
+        // Refresh reviews after deletion
+        await fetchReviews();
+      } catch (err) {
+        console.error("Error deleting review:", err);
+        alert("Failed to delete review. Please try again.");
+      }
     }
   };
 
-  const handleReviewSubmit = (
-    rating: number,
-    title: string,
-    content: string
-  ) => {
-    if (editingReview) {
-      // Update existing review
-      setDisplayedReviews((prev) =>
-        prev.map((r) =>
-          r.id === editingReview.id ? { ...r, rating, title, content } : r
-        )
-      );
-    } else {
-      // Add new review (for demo purposes)
-      console.log("New review:", { rating, title, content });
+  const handleReviewSubmit = async (rating: number, content: string) => {
+    if (!user) return;
+
+    try {
+      await reviewService.createReview({
+        userId: user.userId,
+        gameId: parseInt(gameId, 10),
+        reviewScore: rating,
+        review: content,
+      });
+
+      // Refresh reviews after creation
+      await fetchReviews();
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error("Error creating review:", err);
+      alert("Failed to create review. Please try again.");
     }
-    setEditingReview(null);
   };
+
+  if (loading) {
+    return (
+      <section className="mb-12">
+        <h2 className="text-3xl font-bold text-[var(--text-primary)] mb-6">
+          User Reviews
+        </h2>
+        <div className="text-center py-12">
+          <div className="w-12 h-12 border-4 border-[var(--accent-primary)] border-t-transparent animate-spin mx-auto mb-4"></div>
+          <p className="text-[var(--text-secondary)]">Loading reviews...</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="mb-12">
+        <h2 className="text-3xl font-bold text-[var(--text-primary)] mb-6">
+          User Reviews
+        </h2>
+        <div className="text-center py-12 neo-card">
+          <p className="text-lg text-red-500 mb-4">{error}</p>
+          <button
+            onClick={fetchReviews}
+            className="px-6 py-3 bg-[var(--accent-primary)] text-black border-2 border-black font-bold hover:bg-[var(--accent-secondary)] transition-all"
+          >
+            Retry
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="mb-12">
@@ -108,11 +192,10 @@ const ReviewsSection = ({ reviews, gameName }: ReviewsSectionProps) => {
           <div className="space-y-4 mb-8">
             {currentReviews.map((review) => (
               <ReviewCard
-                key={review.id}
+                key={review.reviewId}
                 review={review}
-                isOwnReview={user?.id === review.userId}
-                onEdit={() => handleEditClick(review)}
-                onDelete={() => handleDeleteClick(review.id)}
+                isOwnReview={user?.userId === review.userId}
+                onDelete={() => handleDeleteClick(review.reviewId)}
               />
             ))}
           </div>
@@ -211,13 +294,9 @@ const ReviewsSection = ({ reviews, gameName }: ReviewsSectionProps) => {
       {/* Write Review Modal */}
       <WriteReviewModal
         isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingReview(null);
-        }}
+        onClose={() => setIsModalOpen(false)}
         gameName={gameName}
         onSubmit={handleReviewSubmit}
-        editingReview={editingReview}
       />
 
       {/* Login Required Modal */}
