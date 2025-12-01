@@ -1,4 +1,4 @@
-export interface User {
+export interface UserProfile {
   userId: number;
   username: string;
   phoneNumber: string;
@@ -6,10 +6,4 @@ export interface User {
   userBio: string | null;
   createdAt?: string;
   updatedAt?: string;
-}
-
-export interface AuthState {
-  user: User | null;
-  isAuthenticated: boolean;
-  accessToken: string | null;
 }

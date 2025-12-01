@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getGameById } from "../data/gamesFromCSV";
-import { getReviewsByGameId } from "../data/mockReviews";
+import { getGameById } from "../services/gameService";
+import type { Game } from "../types/Game";
 import MediaGallery from "../components/gamePage/MediaGallery";
 import ReviewsSection from "../components/gamePage/ReviewsSection";
 import { FiStar, FiArrowLeft, FiCalendar } from "react-icons/fi";
@@ -9,17 +9,57 @@ import { FiStar, FiArrowLeft, FiCalendar } from "react-icons/fi";
 const GamePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const game = id ? getGameById(id) : undefined;
-  const reviews = id ? getReviewsByGameId(id) : [];
+  const [game, setGame] = useState<Game | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
-  if (!game) {
+  useEffect(() => {
+    const fetchGame = async () => {
+      if (!id) {
+        setError("No game ID provided");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const gameData = await getGameById(id);
+        setGame(gameData);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching game:", err);
+        setError("Failed to load game");
+        setGame(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGame();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[var(--accent-primary)] border-t-transparent animate-spin mb-4 mx-auto"></div>
+          <p className="text-xl font-bold text-[var(--text-primary)]">
+            Loading game...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !game) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-4xl font-bold mb-4 text-[var(--text-primary)]">
             Game Not Found
           </h1>
+          <p className="text-[var(--text-secondary)] mb-6">{error}</p>
           <button
             onClick={() => navigate("/")}
             className="bg-[var(--accent-primary)] text-black px-6 py-3 border-2 border-black font-bold hover:bg-[var(--accent-secondary)] transition-all"
@@ -71,12 +111,12 @@ const GamePage = () => {
             <div className="flex items-center gap-2 mb-6">
               <div className="flex items-center gap-1 bg-[var(--accent-primary)] text-black px-4 py-2 border-2 border-black font-bold text-xl">
                 <FiStar size={24} fill="currentColor" />
-                <span>{game.rating.toFixed(1)}/10</span>
+                <span>{game.rating?.toFixed(1) || "N/A"}/10</span>
               </div>
             </div>
 
             {/* Metadata */}
-            <div className="grid grid-cols-2  gap-4 mb-6">
+            <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="p-4 bg-[var(--bg-secondary)] border-2 border-[var(--border-color)]">
                 <div className="flex items-center gap-2 mb-2 text-[var(--text-secondary)]">
                   <FiCalendar size={18} />
@@ -99,38 +139,42 @@ const GamePage = () => {
             </div>
 
             {/* Genres */}
-            <div className="mb-6">
-              <h3 className="text-sm text-left font-semibold text-[var(--text-secondary)] mb-3">
-                GENRES
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {game.genres.map((genre) => (
-                  <span
-                    key={genre}
-                    className="px-4 py-2 bg-[var(--card-bg)] border-2 border-[var(--border-color)] font-semibold text-[var(--text-primary)] hover:bg-[var(--accent-primary)] hover:text-black transition-all cursor-pointer"
-                  >
-                    {genre}
-                  </span>
-                ))}
+            {Array.isArray(game.genres) && game.genres.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm text-left font-semibold text-[var(--text-secondary)] mb-3">
+                  GENRES
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {game.genres.map((genre) => (
+                    <span
+                      key={genre}
+                      className="px-4 py-2 bg-[var(--card-bg)] border-2 border-[var(--border-color)] font-semibold text-[var(--text-primary)] hover:bg-[var(--accent-primary)] hover:text-black transition-all cursor-pointer"
+                    >
+                      {genre}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Platforms */}
-            <div className="mb-6">
-              <h3 className="text-sm text-left font-semibold text-[var(--text-secondary)] mb-3">
-                AVAILABLE ON
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {game.platform.map((platform) => (
-                  <span
-                    key={platform}
-                    className="px-4 py-2 bg-[var(--card-bg)] border-2 border-[var(--border-color)] font-semibold text-[var(--text-primary)] hover:bg-[var(--accent-primary)] hover:text-black transition-all cursor-pointer"
-                  >
-                    {platform}
-                  </span>
-                ))}
+            {Array.isArray(game.platform) && game.platform.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm text-left font-semibold text-[var(--text-secondary)] mb-3">
+                  AVAILABLE ON
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {game.platform.map((platform) => (
+                    <span
+                      key={platform}
+                      className="px-4 py-2 bg-[var(--card-bg)] border-2 border-[var(--border-color)] font-semibold text-[var(--text-primary)] hover:bg-[var(--accent-primary)] hover:text-black transition-all cursor-pointer"
+                    >
+                      {platform}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -147,7 +191,7 @@ const GamePage = () => {
             >
               {game.description}
             </p>
-            {game.description.length > 300 && (
+            {game.description && game.description.length > 300 && (
               <button
                 onClick={() => setDescriptionExpanded(!descriptionExpanded)}
                 className="text-[var(--accent-primary)] font-bold hover:underline mt-3 text-sm"
@@ -159,10 +203,12 @@ const GamePage = () => {
         </div>
 
         {/* Media Gallery Section */}
-        <MediaGallery screenshots={game.screenshots} gameName={game.title} />
+        {Array.isArray(game.screenshots) && game.screenshots.length > 0 && (
+          <MediaGallery screenshots={game.screenshots} gameName={game.title} />
+        )}
 
         {/* Reviews Section */}
-        <ReviewsSection reviews={reviews} gameName={game.title} />
+        <ReviewsSection gameId={id!} gameName={game.title} />
       </div>
     </div>
   );

@@ -1,101 +1,167 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useCallback } from "react";
 import type { ReactNode } from "react";
 import type { User, AuthState } from "../types/User";
+import * as authService from "../services/authService";
+import { clearUserCache } from "../services/userService";
+
+interface MFAState {
+  pending: boolean;
+  mfaToken: number | null;
+  tempUser: { userId: number; username: string; phoneNumber: string } | null;
+}
 
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   register: (
     username: string,
-    email: string,
-    password: string
-  ) => Promise<void>;
-  logout: () => void;
+    password: string,
+    phoneNumber: string
+  ) => Promise<{ requiresMFA: boolean; mfaToken?: number }>;
+  verifyMFA: (mfaInput: number) => Promise<void>;
+  logout: () => Promise<void>;
+  mfaState: MFAState;
+  cancelMFA: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [authState, setAuthState] = useState<AuthState>(() => {
-    // Check localStorage for persisted auth
+    // Check localStorage for persisted user (access token is in memory only)
     const savedUser = localStorage.getItem("user");
     if (savedUser) {
       return {
         user: JSON.parse(savedUser),
         isAuthenticated: true,
+        accessToken: null, // Will need to refresh token
       };
     }
     return {
       user: null,
       isAuthenticated: false,
+      accessToken: null,
     };
   });
 
-  const login = async (email: string, password: string): Promise<void> => {
-    // Simulate API call with demo credentials validation
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // Check demo credentials
-        if (email === "demo" && password === "1234") {
-          const mockUser: User = {
-            id: "demo-user",
-            username: "demo",
-            email: "demo@example.com",
-          };
+  const [mfaState, setMfaState] = useState<MFAState>({
+    pending: false,
+    mfaToken: null,
+    tempUser: null,
+  });
 
-          setAuthState({
-            user: mockUser,
-            isAuthenticated: true,
-          });
+  const login = useCallback(
+    async (username: string, password: string): Promise<void> => {
+      const response = await authService.login(username, password);
 
-          localStorage.setItem("user", JSON.stringify(mockUser));
-          resolve();
-        } else {
-          reject(new Error("Invalid credentials"));
-        }
-      }, 500);
+      const user: User = response.user;
+
+      setAuthState({
+        user,
+        isAuthenticated: true,
+        accessToken: response.accessToken,
+      });
+
+      localStorage.setItem("user", JSON.stringify(user));
+    },
+    []
+  );
+
+  const register = useCallback(
+    async (
+      username: string,
+      password: string,
+      phoneNumber: string
+    ): Promise<{ requiresMFA: boolean; mfaToken?: number }> => {
+      const response = await authService.createUser(
+        username,
+        password,
+        phoneNumber
+      );
+
+      // Store MFA state for verification
+      setMfaState({
+        pending: true,
+        mfaToken: response.user.mfaToken,
+        tempUser: {
+          userId: response.user.userId,
+          username: response.user.username,
+          phoneNumber: response.user.phoneNumber,
+        },
+      });
+
+      return {
+        requiresMFA: true,
+        mfaToken: response.user.mfaToken,
+      };
+    },
+    []
+  );
+
+  const verifyMFA = useCallback(
+    async (mfaInput: number): Promise<void> => {
+      if (!mfaState.mfaToken) {
+        throw new Error("No MFA token available");
+      }
+
+      const response = await authService.verifyMFA(mfaInput, mfaState.mfaToken);
+
+      const user: User = response.user;
+
+      setAuthState({
+        user,
+        isAuthenticated: true,
+        accessToken: response.accessToken,
+      });
+
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // Clear MFA state
+      setMfaState({
+        pending: false,
+        mfaToken: null,
+        tempUser: null,
+      });
+    },
+    [mfaState.mfaToken]
+  );
+
+  const cancelMFA = useCallback(() => {
+    setMfaState({
+      pending: false,
+      mfaToken: null,
+      tempUser: null,
     });
-  };
+  }, []);
 
-  const register = async (
-    username: string,
-    email: string,
-    password: string
-  ): Promise<void> => {
-    // Simulate API call - for demo, accept any registration
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (!username || !email || !password) {
-          reject(new Error("All fields are required"));
-          return;
-        }
+  const logout = useCallback(async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error("Logout API error:", error);
+    }
 
-        const mockUser: User = {
-          id: String(Date.now()),
-          username: username,
-          email: email,
-        };
-
-        setAuthState({
-          user: mockUser,
-          isAuthenticated: true,
-        });
-
-        localStorage.setItem("user", JSON.stringify(mockUser));
-        resolve();
-      }, 500);
-    });
-  };
-
-  const logout = () => {
+    // Clear state regardless of API success
     setAuthState({
       user: null,
       isAuthenticated: false,
+      accessToken: null,
     });
     localStorage.removeItem("user");
-  };
+    clearUserCache();
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ ...authState, login, register, logout }}>
+    <AuthContext.Provider
+      value={{
+        ...authState,
+        login,
+        register,
+        verifyMFA,
+        logout,
+        mfaState,
+        cancelMFA,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

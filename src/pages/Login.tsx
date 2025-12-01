@@ -7,16 +7,18 @@ const Login = () => {
   const [searchParams] = useSearchParams();
   const initialMode =
     searchParams.get("mode") === "register" ? "register" : "login";
-  const [mode, setMode] = useState<"login" | "register">(initialMode);
+  const [mode, setMode] = useState<"login" | "register" | "mfa">(initialMode);
   const [formData, setFormData] = useState({
     username: "",
-    email: "",
     password: "",
+    phoneNumber: "",
   });
+  const [mfaCode, setMfaCode] = useState("");
+  const [displayMfaToken, setDisplayMfaToken] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const { login, register } = useAuth();
+  const { login, register, verifyMFA, mfaState, cancelMFA } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: FormEvent) => {
@@ -26,24 +28,141 @@ const Login = () => {
 
     try {
       if (mode === "login") {
-        await login(formData.email, formData.password);
-      } else {
-        await register(formData.username, formData.email, formData.password);
+        await login(formData.username, formData.password);
+        navigate("/");
+      } else if (mode === "register") {
+        const result = await register(
+          formData.username,
+          formData.password,
+          formData.phoneNumber
+        );
+        if (result.requiresMFA && result.mfaToken) {
+          setDisplayMfaToken(result.mfaToken);
+          setMode("mfa");
+        }
       }
-      navigate("/");
     } catch (error) {
       console.error("Authentication error:", error);
-      setError("Invalid credentials. Please try again.");
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("Authentication failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleMode = () => {
-    setMode(mode === "login" ? "register" : "login");
-    setFormData({ username: "", email: "", password: "" });
+  const handleMFASubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      await verifyMFA(parseInt(mfaCode, 10));
+      navigate("/");
+    } catch (error) {
+      console.error("MFA verification error:", error);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("MFA verification failed. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelMFA = () => {
+    cancelMFA();
+    setMode("register");
+    setMfaCode("");
+    setDisplayMfaToken(null);
     setError("");
   };
+
+  const toggleMode = () => {
+    const newMode = mode === "login" ? "register" : "login";
+    setMode(newMode);
+    setFormData({ username: "", password: "", phoneNumber: "" });
+    setError("");
+  };
+
+  // MFA Verification Screen
+  if (mode === "mfa" || mfaState.pending) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center py-12 px-4">
+        <div className="w-full max-w-md">
+          <div className="bg-[var(--card-bg)] border-2 border-[var(--border-color)] shadow-[6px_6px_0_0_var(--shadow-color)] p-8">
+            <h1 className="text-3xl font-bold mb-2 text-[var(--text-primary)]">
+              Verify Your Account
+            </h1>
+            <p className="text-[var(--text-secondary)] mb-6">
+              Enter the 6-digit verification code to complete registration.
+            </p>
+
+            {/* Display MFA Token for testing */}
+            {displayMfaToken && (
+              <div className="mb-6 p-4 bg-[var(--accent-primary)] border-2 border-black">
+                <h3 className="font-bold text-sm text-black mb-1">
+                  Your Verification Code (for testing):
+                </h3>
+                <p className="text-2xl font-mono font-bold text-black">
+                  {displayMfaToken}
+                </p>
+              </div>
+            )}
+
+            <form onSubmit={handleMFASubmit} className="space-y-5">
+              <div>
+                <label
+                  htmlFor="mfaCode"
+                  className="block text-sm font-bold mb-2 text-[var(--text-primary)]"
+                >
+                  Verification Code
+                </label>
+                <input
+                  type="text"
+                  id="mfaCode"
+                  value={mfaCode}
+                  onChange={(e) =>
+                    setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  required
+                  maxLength={6}
+                  className="w-full text-center text-2xl font-mono tracking-widest"
+                  placeholder="000000"
+                  autoFocus
+                />
+              </div>
+
+              {error && (
+                <div className="p-3 bg-red-100 dark:bg-red-900/20 border-2 border-red-500 text-red-700 dark:text-red-400 text-sm font-semibold">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading || mfaCode.length !== 6}
+                className="w-full bg-[var(--accent-primary)] text-black py-3 border-2 border-black font-bold hover:bg-[var(--accent-secondary)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Verifying..." : "Verify & Complete Registration"}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCancelMFA}
+                className="w-full bg-[var(--button-bg)] text-[var(--text-primary)] py-3 border-2 border-[var(--border-color)] font-bold hover:bg-[var(--bg-secondary)] transition-all"
+              >
+                Cancel
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100vh-64px)] flex items-center justify-center py-12 px-4">
@@ -79,53 +198,49 @@ const Login = () => {
           </h1>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Username (Register only) */}
-            {mode === "register" && (
-              <div>
-                <label
-                  htmlFor="username"
-                  className="block text-sm font-bold mb-2 text-[var(--text-primary)]"
-                >
-                  Username
-                </label>
-                <input
-                  type="text"
-                  id="username"
-                  value={formData.username}
-                  onChange={(e) =>
-                    setFormData({ ...formData, username: e.target.value })
-                  }
-                  required={mode === "register"}
-                  className="w-full"
-                  placeholder="Enter your username"
-                />
-              </div>
-            )}
-
-            {/* Email / Username */}
+            {/* Username */}
             <div>
               <label
-                htmlFor="email"
+                htmlFor="username"
                 className="block text-sm font-bold mb-2 text-[var(--text-primary)]"
               >
-                {mode === "login" ? "Username or Email" : "Email"}
+                Username
               </label>
               <input
-                type={mode === "login" ? "text" : "email"}
-                id="email"
-                value={formData.email}
+                type="text"
+                id="username"
+                value={formData.username}
                 onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
+                  setFormData({ ...formData, username: e.target.value })
                 }
                 required
                 className="w-full"
-                placeholder={
-                  mode === "login"
-                    ? "Enter your username or email"
-                    : "Enter your email"
-                }
+                placeholder="Enter your username"
               />
             </div>
+
+            {/* Phone Number (Register only) */}
+            {mode === "register" && (
+              <div>
+                <label
+                  htmlFor="phoneNumber"
+                  className="block text-sm font-bold mb-2 text-[var(--text-primary)]"
+                >
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  id="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phoneNumber: e.target.value })
+                  }
+                  required={mode === "register"}
+                  className="w-full"
+                  placeholder="Enter your phone number"
+                />
+              </div>
+            )}
 
             {/* Password */}
             <div>
@@ -168,23 +283,6 @@ const Login = () => {
                 : "Create Account"}
             </button>
           </form>
-
-          {/* Demo Credentials */}
-          {mode === "login" && (
-            <div className="mt-6 p-4 bg-[var(--bg-secondary)] border-2 border-[var(--border-color)]">
-              <h3 className="font-bold text-sm text-[var(--text-primary)] mb-2">
-                Demo Credentials
-              </h3>
-              <div className="space-y-1 text-sm">
-                <p className="text-[var(--text-secondary)]">
-                  <span className="font-semibold">Username:</span> demo
-                </p>
-                <p className="text-[var(--text-secondary)]">
-                  <span className="font-semibold">Password:</span> 1234
-                </p>
-              </div>
-            </div>
-          )}
 
           {/* Toggle Link */}
           <div className="mt-6 text-center">

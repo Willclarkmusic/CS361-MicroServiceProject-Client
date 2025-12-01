@@ -6,6 +6,10 @@ import Footer from "./components/common/Footer.tsx";
 import Home from "./pages/Home.tsx";
 import Login from "./pages/Login.tsx";
 import GamePage from "./pages/GamePage.tsx";
+import UserProfile from "./pages/UserProfile.tsx";
+import Search from "./pages/Search.tsx";
+import News from "./pages/News.tsx";
+import NewsArticle from "./pages/NewsArticle.tsx";
 import "./App.css";
 
 function App() {
@@ -20,6 +24,10 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/game/:id" element={<GamePage />} />
+                <Route path="/user/:userId" element={<UserProfile />} />
+                <Route path="/search" element={<Search />} />
+                <Route path="/news" element={<News />} />
+                <Route path="/news/:id" element={<NewsArticle />} />
               </Routes>
             </main>
             <Footer />
